@@ -24,27 +24,37 @@ class RegisteredUserController extends Controller
 
     /**
      * Handle an incoming registration request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
      */
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+        $validated = $request->validate([
+            'name'     => ['required', 'string', 'max:255'],
+            'email'    => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'name'     => $validated['name'],
+            'email'    => strtolower($validated['email']),
+            'password' => Hash::make($validated['password']),
+            'role'     => 'customer', // đảm bảo có cột 'role' trong users
         ]);
 
-        event(new Registered($user));
+        // Nếu User::$fillable chưa có 'role', dùng cách sau thay cho dòng trên:
+        // $user = User::create([
+        //   'name' => $validated['name'],
+        //   'email' => strtolower($validated['email']),
+        //   'password' => Hash::make($validated['password']),
+        // ]);
+        // $user->forceFill(['role' => 'customer'])->save();
 
+        event(new Registered($user));
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        // Nếu bạn KHÔNG có route('dashboard'), dùng 'home' (đã có trong patch)
+        return redirect()->intended(route('home'));
+
+        // Nếu muốn về dashboard, đảm bảo bạn đã có route('dashboard'), rồi dùng:
+        // return redirect()->intended(route('dashboard'));
     }
 }
