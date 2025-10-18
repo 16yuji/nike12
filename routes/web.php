@@ -1,17 +1,20 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Gate;
 use App\Http\Controllers\{
     HomeController,
     ProductController,
     CartController,
     CheckoutController,
-    OrderController,
-    Admin\ProductAdminController
+    OrderController
+};
+use App\Http\Controllers\Admin\{
+    ProductAdminController,
+    UserAdminController,
+    OrderAdminController
 };
 
-// Public routes
+// Public
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // Catalog
@@ -28,18 +31,30 @@ Route::delete('/cart/{item}', [CartController::class,'remove'])->name('cart.remo
 Route::get('/checkout', [CheckoutController::class,'index'])->name('checkout.index');
 Route::post('/checkout', [CheckoutController::class,'store'])->name('checkout.store');
 
-// Orders (require auth)
-Route::middleware(['auth'])->group(function(){
+// Orders (customer) – cần đăng nhập
+Route::middleware('auth')->group(function () {
     Route::get('/orders', [OrderController::class,'index'])->name('orders.index');
+    Route::get('/dashboard', fn () => view('dashboard'))->name('dashboard');
 });
 
-// Admin (require admin gate)
-Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function(){
-    Route::resource('products', ProductAdminController::class);
-});
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth'])->name('dashboard');
+// Admin – chỉ admin mới vào
+Route::middleware(['auth', 'is_admin'])
+    ->prefix('admin')->name('admin.')
+    ->group(function () {
+        Route::view('/', 'admin.dashboard')->name('dashboard');
+
+        // Quản lý Sản phẩm
+        Route::resource('products', ProductAdminController::class);
+
+        // Quản lý Người dùng
+        Route::resource('users', UserAdminController::class)->except(['show']);
+
+        // Quản lý Đơn hàng
+        Route::get('orders', [OrderAdminController::class,'index'])->name('orders.index');
+        Route::get('orders/{order}', [OrderAdminController::class,'show'])->name('orders.show');
+        Route::patch('orders/{order}/status', [OrderAdminController::class,'updateStatus'])->name('orders.updateStatus');
+        Route::delete('orders/{order}', [OrderAdminController::class,'destroy'])->name('orders.destroy');
+    });
 
 // Breeze auth routes
 require __DIR__.'/auth.php';

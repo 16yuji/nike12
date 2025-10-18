@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ $title ?? 'Nike-style Store' }}</title>
+  <title>{{ $title ?? 'Hyunshop' }}</title>
   <meta name="csrf-token" content="{{ csrf_token() }}">
   @vite(['resources/css/app.css','resources/js/app.js'])
 </head>
@@ -14,7 +14,7 @@
     
   </div>
 
-  {{-- Slim top bar like nike.com/vn --}}
+  {{-- Slim top bar --}}
   <div class="w-full bg-zinc-100 text-xs">
     <div class="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
       <div class="flex items-center gap-4">
@@ -26,6 +26,11 @@
           <a href="{{ route('register') }}" class="hover:underline">Join Us</a>
           <a href="{{ route('login') }}" class="hover:underline">Sign In</a>
         @else
+          {{-- Chỉ admin mới thấy link này ở top bar --}}
+          @if(auth()->user()->isAdmin())
+            <a href="{{ route('admin.dashboard') }}" class="hover:underline font-semibold">Admin</a>
+          @endif
+
           <a href="{{ url('/dashboard') }}" class="hover:underline">Account</a>
           <form method="POST" action="{{ route('logout') }}">
             @csrf
@@ -41,7 +46,7 @@
     <div class="max-w-7xl mx-auto px-4 py-4 flex items-center gap-4">
       {{-- Logo --}}
       <a href="{{ route('home') }}" class="font-black tracking-tight text-2xl">
-        NIKE<span class="font-normal">.vn</span>
+        Hyunshop
       </a>
 
       {{-- Primary nav --}}
@@ -68,6 +73,17 @@
 
       {{-- Actions --}}
       <div class="flex items-center gap-3">
+        {{-- Chỉ admin mới thấy nút Admin ở header actions --}}
+        @auth
+          @if(auth()->user()->isAdmin())
+            <a href="{{ route('admin.dashboard') }}"
+               class="hidden md:inline-flex items-center gap-1 text-sm px-2 py-1 border rounded hover:bg-zinc-50"
+               title="Khu vực quản trị">
+              🛡️ <span>Admin</span>
+            </a>
+          @endif
+        @endauth
+
         <a href="{{ route('cart.index') }}" class="text-xl" aria-label="Cart">🛒</a>
       </div>
     </div>
@@ -125,7 +141,7 @@
         </ul>
       </div>
       <div class="text-zinc-500">
-        © {{ date('Y') }} Nike-style demo. Chỉ dùng cho học tập.
+        © {{ date('Y') }} Hyunshop
       </div>
     </div>
   </footer>

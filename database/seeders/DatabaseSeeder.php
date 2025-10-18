@@ -9,7 +9,9 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            CatalogSeeder::class,
+            AdminUserSeeder::class, //  tạo admin trước
+            CatalogSeeder::class,   // các seeder khác của bạn
         ]);
     }
 }
+

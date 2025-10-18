@@ -3,40 +3,78 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Product; // đảm bảo đã có model Product
 use Illuminate\Http\Request;
-use App\Models\{Product, ProductImage};
+use Illuminate\Validation\Rule;
 
-class ProductAdminController extends Controller
+class ProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $this->authorize('admin');
-        $products = Product::latest()->paginate(20);
-        return view('admin.products.index', compact('products'));
+        $q = $request->string('q')->toString();
+        $products = Product::when($q, fn($qr) => $qr->where('name','like',"%$q%"))
+            ->latest('id')
+            ->paginate(12)
+            ->withQueryString();
+
+        return view('admin.products.index', compact('products','q'));
     }
 
     public function create()
     {
-        $this->authorize('admin');
         return view('admin.products.create');
     }
 
-    public function store(Request $r)
+    public function store(Request $request)
     {
-        $this->authorize('admin');
-        $data = $r->validate([
-            'name'=>'required','slug'=>'required|unique:products,slug',
-            'sku'=>'required|unique:products,sku',
-            'price'=>'required|integer','sale_price'=>'nullable|integer',
-            'category_id'=>'required|exists:categories,id',
-            'brand_id'=>'nullable|exists:brands,id',
-            'image'=>'nullable|image'
+        $data = $request->validate([
+            'name'        => ['required','string','max:255', Rule::unique('products','name')],
+            'sku'         => ['nullable','string','max:100', Rule::unique('products','sku')],
+            'price'       => ['required','numeric','min:0'],
+            'stock'       => ['required','integer','min:0'],
+            'description' => ['nullable','string'],
+            'image'       => ['nullable','image','max:2048'],
+            'category_id' => ['nullable','integer'],
         ]);
-        $p = Product::create($data);
-        if ($r->file('image')){
-            $path = $r->file('image')->store('products','public');
-            $p->images()->create(['path'=>$path,'is_main'=>true,'sort_order'=>1]);
+
+        if ($request->hasFile('image')) {
+            $data['image_path'] = $request->file('image')->store('products','public');
         }
-        return redirect()->route('admin.products.index')->with('ok','Đã tạo!');
+
+        Product::create($data);
+
+        return redirect()->route('admin.products.index')->with('ok', 'Đã tạo sản phẩm.');
+    }
+
+    public function edit(Product $product)
+    {
+        return view('admin.products.edit', compact('product'));
+    }
+
+    public function update(Request $request, Product $product)
+    {
+        $data = $request->validate([
+            'name'        => ['required','string','max:255', Rule::unique('products','name')->ignore($product->id)],
+            'sku'         => ['nullable','string','max:100', Rule::unique('products','sku')->ignore($product->id)],
+            'price'       => ['required','numeric','min:0'],
+            'stock'       => ['required','integer','min:0'],
+            'description' => ['nullable','string'],
+            'image'       => ['nullable','image','max:2048'],
+            'category_id' => ['nullable','integer'],
+        ]);
+
+        if ($request->hasFile('image')) {
+            $data['image_path'] = $request->file('image')->store('products','public');
+        }
+
+        $product->update($data);
+
+        return redirect()->route('admin.products.index')->with('ok', 'Đã cập nhật sản phẩm.');
+    }
+
+    public function destroy(Product $product)
+    {
+        $product->delete();
+        return back()->with('ok', 'Đã xóa sản phẩm.');
     }
 }
