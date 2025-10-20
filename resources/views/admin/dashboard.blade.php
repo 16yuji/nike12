@@ -1,12 +1,10 @@
-@extends('layouts.app')
-
+@extends('admin.layout')
+@section('title','Admin Dashboard')
+@section('page-title','Tổng quan')
 @section('content')
-<div class="max-w-6xl mx-auto p-4">
-  <h1 class="text-2xl font-bold mb-4">Bảng điều khiển Admin</h1>
-  <div class="grid md:grid-cols-3 gap-4">
-    <a href="{{ route('admin.products.index') }}" class="p-4 border rounded">Quản lý Sản phẩm</a>
-    <a href="{{ route('admin.orders.index') }}" class="p-4 border rounded">Quản lý Đơn hàng</a>
-    <a href="{{ route('admin.users.index') }}" class="p-4 border rounded">Quản lý Người dùng</a>
+  <div class="grid gap-4 md:grid-cols-3">
+    <div class="p-4 bg-white rounded-xl shadow">Tổng đơn hôm nay: <strong>{{ $ordersToday ?? 0 }}</strong></div>
+    <div class="p-4 bg-white rounded-xl shadow">Sản phẩm: <strong>{{ $productCount ?? 0 }}</strong></div>
+    <div class="p-4 bg-white rounded-xl shadow">Người dùng: <strong>{{ $userCount ?? 0 }}</strong></div>
   </div>
-</div>
 @endsection

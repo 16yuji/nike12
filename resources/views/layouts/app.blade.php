@@ -11,7 +11,7 @@
 
   {{-- Top notice bar --}}
   <div class="w-full bg-zinc-100 text-xs text-center py-2">
-    
+    Free Standard Delivery &amp; 30-Day Free Returns.
   </div>
 
   {{-- Slim top bar --}}
@@ -21,20 +21,23 @@
         <a href="#" class="hover:underline">Find a Store</a>
         <a href="#" class="hover:underline">Help</a>
       </div>
-      <div class="flex items-center gap-4">
+
+      <div class="flex items-center gap-3">
         @guest
           <a href="{{ route('register') }}" class="hover:underline">Join Us</a>
           <a href="{{ route('login') }}" class="hover:underline">Sign In</a>
         @else
-          {{-- Chỉ admin mới thấy link này ở top bar --}}
-          @if(auth()->user()->isAdmin())
-            <a href="{{ route('admin.dashboard') }}" class="hover:underline font-semibold">Admin</a>
+          {{-- Chỉ admin mới thấy link Admin ở top bar (có fallback kiểm tra route) --}}
+          @if(method_exists(auth()->user(),'isAdmin') && auth()->user()->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.dashboard'))
+            <a href="{{ route('admin.dashboard') }}" class="hover:underline font-semibold" title="Khu vực quản trị">Admin</a>
           @endif
 
           <a href="{{ url('/dashboard') }}" class="hover:underline">Account</a>
-          <form method="POST" action="{{ route('logout') }}">
+
+          {{-- Logout an toàn (POST + CSRF), hiển thị như link --}}
+          <form method="POST" action="{{ route('logout') }}" class="inline">
             @csrf
-            <button class="hover:underline" type="submit">Sign Out</button>
+            <button class="hover:underline" type="submit" aria-label="Sign out">Sign Out</button>
           </form>
         @endguest
       </div>
@@ -50,21 +53,22 @@
       </a>
 
       {{-- Primary nav --}}
+      @php $cat = request('category'); @endphp
       <nav class="hidden md:flex items-center gap-6 ml-6 text-[15px] font-medium">
-        <a class="hover:underline {{ request('category')==='new-featured' ? 'font-semibold' : '' }}"
+        <a class="hover:underline {{ $cat==='new-featured' ? 'font-semibold' : '' }}"
            href="{{ route('products.index', ['category'=>'new-featured']) }}">New &amp; Featured</a>
-        <a class="hover:underline {{ request('category')==='men' ? 'font-semibold' : '' }}"
+        <a class="hover:underline {{ $cat==='men' ? 'font-semibold' : '' }}"
            href="{{ route('products.index', ['category'=>'men']) }}">Men</a>
-        <a class="hover:underline {{ request('category')==='women' ? 'font-semibold' : '' }}"
+        <a class="hover:underline {{ $cat==='women' ? 'font-semibold' : '' }}"
            href="{{ route('products.index', ['category'=>'women']) }}">Women</a>
-        <a class="hover:underline {{ request('category')==='kids' ? 'font-semibold' : '' }}"
+        <a class="hover:underline {{ $cat==='kids' ? 'font-semibold' : '' }}"
            href="{{ route('products.index', ['category'=>'kids']) }}">Kids</a>
-        <a class="text-red-600 hover:underline {{ request('category')==='sale' ? 'font-semibold' : '' }}"
+        <a class="text-red-600 hover:underline {{ $cat==='sale' ? 'font-semibold' : '' }}"
            href="{{ route('products.index', ['category'=>'sale']) }}">Sale</a>
       </nav>
 
       {{-- Search (đưa về products.index) --}}
-      <form action="{{ route('products.index') }}" method="GET" class="ml-auto flex w-full md:w-auto">
+      <form action="{{ route('products.index') }}" method="GET" class="ml-auto flex w-full md:w-auto" role="search" aria-label="Site search">
         <input name="q" value="{{ request('q') }}"
                class="w-full md:w-64 border border-zinc-300 rounded-l px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-400"
                placeholder="Search"/>
@@ -73,12 +77,12 @@
 
       {{-- Actions --}}
       <div class="flex items-center gap-3">
-        {{-- Chỉ admin mới thấy nút Admin ở header actions --}}
+        {{-- Nút Admin trong header actions (ẩn trên mobile) --}}
         @auth
-          @if(auth()->user()->isAdmin())
+          @if(method_exists(auth()->user(),'isAdmin') && auth()->user()->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.dashboard'))
             <a href="{{ route('admin.dashboard') }}"
                class="hidden md:inline-flex items-center gap-1 text-sm px-2 py-1 border rounded hover:bg-zinc-50"
-               title="Khu vực quản trị">
+               title="Khu vực quản trị" aria-label="Admin area">
               🛡️ <span>Admin</span>
             </a>
           @endif
@@ -88,8 +92,6 @@
       </div>
     </div>
   </header>
-
-  <div class="w-full bg-zinc-100 text-xs text-center py-2">Free Standard Delivery &amp; 30-Day Free Returns.</div>
 
   {{-- Flash messages --}}
   @if(session('ok') || session('status'))

@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('admin.layout')
 @section('content')
 <div class="max-w-6xl mx-auto p-4">
   <h1 class="text-xl font-bold mb-3">Đơn hàng</h1>

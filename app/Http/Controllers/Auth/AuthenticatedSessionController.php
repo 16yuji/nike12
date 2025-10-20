@@ -7,14 +7,13 @@ use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
     /**
      * Display the login view.
      */
-    public function create(): View
+    public function create()
     {
         return view('auth.login');
     }
@@ -25,9 +24,16 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
-
         $request->session()->regenerate();
 
+        $user = $request->user();
+
+        // Nếu là admin => mặc định về admin.dashboard
+        if ($user && method_exists($user, 'isAdmin') && $user->isAdmin()) {
+            return redirect()->intended(route('admin.dashboard', absolute: false));
+        }
+
+        // Người dùng thường => về dashboard
         return redirect()->intended(route('dashboard', absolute: false));
     }
 
@@ -39,7 +45,6 @@ class AuthenticatedSessionController extends Controller
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
 
         return redirect('/');
