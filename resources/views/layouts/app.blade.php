@@ -28,7 +28,7 @@
             <a href="{{ route('admin.dashboard') }}" class="hover:underline font-semibold" title="Khu vực quản trị">Quản trị</a>
           @endif
 
-          <a href="{{ url('/dashboard') }}" class="hover:underline">Tài khoản</a>
+           <a href="{{ route('account.show') }}" class="hover:underline">Tài khoản</a>
 
           {{-- Đăng xuất an toàn --}}
           <form method="POST" action="{{ route('logout') }}" class="inline">
