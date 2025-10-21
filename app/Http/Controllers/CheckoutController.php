@@ -8,9 +8,16 @@ use App\Models\{Order};
 
 class CheckoutController extends Controller
 {
+    protected $cartController;
+
+    public function __construct(CartController $cartController)
+    {
+        $this->cartController = $cartController;
+    }
+
     public function index(Request $r)
     {
-        $cart = app(CartController::class)->getOrCreateCart($r)->load('items.product','items.variant');
+        $cart = $this->cartController->getOrCreateCart($r)->load('items.product','items.variant');
         abort_if($cart->items->isEmpty(), 404);
         return view('checkout.index',compact('cart'));
     }
@@ -21,7 +28,7 @@ class CheckoutController extends Controller
             'shipping_name'=>'required','shipping_phone'=>'required','shipping_address'=>'required'
         ]);
 
-        $cart = app(CartController::class)->getOrCreateCart($r)->load('items.product','items.variant');
+        $cart = $this->cartController->getOrCreateCart($r)->load('items.product','items.variant');
         abort_if($cart->items->isEmpty(), 404);
 
         $subtotal = $cart->items->sum(fn($i)=>$i->unit_price * $i->quantity);

@@ -8,7 +8,7 @@ use App\Models\{Cart, CartItem, Product};
 
 class CartController extends Controller
 {
-    protected function getOrCreateCart(Request $r): Cart
+    public function getOrCreateCart(Request $r): Cart
     {
         if (auth()->check()){
             return Cart::firstOrCreate(['user_id'=>auth()->id()]);

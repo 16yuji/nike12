@@ -9,42 +9,38 @@
 </head>
 <body class="min-h-screen bg-white text-zinc-900 antialiased">
 
-  {{-- Top notice bar --}}
-  <div class="w-full bg-zinc-100 text-xs text-center py-2">
-    Free Standard Delivery &amp; 30-Day Free Returns.
-  </div>
 
-  {{-- Slim top bar --}}
+  {{-- Thanh điều hướng phụ --}}
   <div class="w-full bg-zinc-100 text-xs">
     <div class="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
       <div class="flex items-center gap-4">
-        <a href="#" class="hover:underline">Find a Store</a>
-        <a href="#" class="hover:underline">Help</a>
+        <a href="#" class="hover:underline">Tìm cửa hàng</a>
+        <a href="http://facebook.com/16yujiz/" target="_blank" class="hover:underline">Trợ giúp</a>
       </div>
 
       <div class="flex items-center gap-3">
         @guest
-          <a href="{{ route('register') }}" class="hover:underline">Join Us</a>
-          <a href="{{ route('login') }}" class="hover:underline">Sign In</a>
+          <a href="{{ route('register') }}" class="hover:underline">Đăng ký</a>
+          <a href="{{ route('login') }}" class="hover:underline">Đăng nhập</a>
         @else
-          {{-- Chỉ admin mới thấy link Admin ở top bar (có fallback kiểm tra route) --}}
+          {{-- Chỉ hiển thị với tài khoản quản trị --}}
           @if(method_exists(auth()->user(),'isAdmin') && auth()->user()->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.dashboard'))
-            <a href="{{ route('admin.dashboard') }}" class="hover:underline font-semibold" title="Khu vực quản trị">Admin</a>
+            <a href="{{ route('admin.dashboard') }}" class="hover:underline font-semibold" title="Khu vực quản trị">Quản trị</a>
           @endif
 
-          <a href="{{ url('/dashboard') }}" class="hover:underline">Account</a>
+          <a href="{{ url('/dashboard') }}" class="hover:underline">Tài khoản</a>
 
-          {{-- Logout an toàn (POST + CSRF), hiển thị như link --}}
+          {{-- Đăng xuất an toàn --}}
           <form method="POST" action="{{ route('logout') }}" class="inline">
             @csrf
-            <button class="hover:underline" type="submit" aria-label="Sign out">Sign Out</button>
+            <button class="hover:underline" type="submit" aria-label="Đăng xuất">Đăng xuất</button>
           </form>
         @endguest
       </div>
     </div>
   </div>
 
-  {{-- Header / Navigation --}}
+  {{-- Header / Thanh điều hướng chính --}}
   <header class="border-b">
     <div class="max-w-7xl mx-auto px-4 py-4 flex items-center gap-4">
       {{-- Logo --}}
@@ -52,48 +48,48 @@
         Hyunshop
       </a>
 
-      {{-- Primary nav --}}
-      @php $cat = request('category'); @endphp
+      {{-- Menu chính --}}
+      @php $gender = request('gender'); @endphp
       <nav class="hidden md:flex items-center gap-6 ml-6 text-[15px] font-medium">
-        <a class="hover:underline {{ $cat==='new-featured' ? 'font-semibold' : '' }}"
-           href="{{ route('products.index', ['category'=>'new-featured']) }}">New &amp; Featured</a>
-        <a class="hover:underline {{ $cat==='men' ? 'font-semibold' : '' }}"
-           href="{{ route('products.index', ['category'=>'men']) }}">Men</a>
-        <a class="hover:underline {{ $cat==='women' ? 'font-semibold' : '' }}"
-           href="{{ route('products.index', ['category'=>'women']) }}">Women</a>
-        <a class="hover:underline {{ $cat==='kids' ? 'font-semibold' : '' }}"
-           href="{{ route('products.index', ['category'=>'kids']) }}">Kids</a>
-        <a class="text-red-600 hover:underline {{ $cat==='sale' ? 'font-semibold' : '' }}"
-           href="{{ route('products.index', ['category'=>'sale']) }}">Sale</a>
+        <a class="hover:underline {{ !$gender && request('category')==='new-featured' ? 'font-semibold' : '' }}"
+           href="{{ route('products.index', ['category'=>'new-featured']) }}">Sản phẩm mới &amp; Nổi bật</a>
+        <a class="hover:underline {{ $gender==='men' ? 'font-semibold' : '' }}"
+           href="{{ route('products.index', ['gender'=>'men']) }}">Nam</a>
+        <a class="hover:underline {{ $gender==='women' ? 'font-semibold' : '' }}"
+           href="{{ route('products.index', ['gender'=>'women']) }}">Nữ</a>
+        <a class="hover:underline {{ $gender==='kids' ? 'font-semibold' : '' }}"
+           href="{{ route('products.index', ['gender'=>'kids']) }}">Trẻ em</a>
+        <a class="text-red-600 hover:underline {{ !$gender && request('category')==='sale' ? 'font-semibold' : '' }}"
+           href="{{ route('products.index', ['category'=>'sale']) }}">Khuyến mãi</a>
       </nav>
 
-      {{-- Search (đưa về products.index) --}}
-      <form action="{{ route('products.index') }}" method="GET" class="ml-auto flex w-full md:w-auto" role="search" aria-label="Site search">
+      {{-- Ô tìm kiếm --}}
+      <form action="{{ route('products.index') }}" method="GET" class="ml-auto flex w-full md:w-auto" role="search" aria-label="Tìm kiếm">
         <input name="q" value="{{ request('q') }}"
                class="w-full md:w-64 border border-zinc-300 rounded-l px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-400"
-               placeholder="Search"/>
-        <button type="submit" class="border border-l-0 border-zinc-300 rounded-r px-3 text-sm">Search</button>
+               placeholder="Tìm kiếm sản phẩm..."/>
+        <button type="submit" class="border border-l-0 border-zinc-300 rounded-r px-3 text-sm">Tìm</button>
       </form>
 
-      {{-- Actions --}}
+      {{-- Các nút hành động --}}
       <div class="flex items-center gap-3">
-        {{-- Nút Admin trong header actions (ẩn trên mobile) --}}
+        {{-- Nút Admin --}}
         @auth
           @if(method_exists(auth()->user(),'isAdmin') && auth()->user()->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.dashboard'))
             <a href="{{ route('admin.dashboard') }}"
                class="hidden md:inline-flex items-center gap-1 text-sm px-2 py-1 border rounded hover:bg-zinc-50"
-               title="Khu vực quản trị" aria-label="Admin area">
-              🛡️ <span>Admin</span>
+               title="Khu vực quản trị" aria-label="Khu vực quản trị">
+              🛡️ <span>Quản trị</span>
             </a>
           @endif
         @endauth
 
-        <a href="{{ route('cart.index') }}" class="text-xl" aria-label="Cart">🛒</a>
+        <a href="{{ route('cart.index') }}" class="text-xl" aria-label="Giỏ hàng">🛒</a>
       </div>
     </div>
   </header>
 
-  {{-- Flash messages --}}
+  {{-- Thông báo --}}
   @if(session('ok') || session('status'))
     <div class="max-w-7xl mx-auto px-4 mt-4">
       <div class="rounded-md bg-green-50 border border-green-200 text-green-800 px-4 py-3 text-sm">
@@ -111,39 +107,39 @@
     </div>
   @endif
 
-  {{-- Main content --}}
+  {{-- Nội dung chính --}}
   <main class="max-w-7xl mx-auto px-4 py-8">
     @yield('content')
   </main>
 
-  {{-- Footer --}}
+  {{-- Chân trang --}}
   <footer class="border-t">
     <div class="max-w-7xl mx-auto px-4 py-10 grid grid-cols-2 md:grid-cols-4 gap-6 text-sm text-zinc-600">
       <div>
         <div class="font-semibold mb-2">Trợ giúp</div>
         <ul class="space-y-1">
           <li><a href="#" class="hover:underline">Trạng thái đơn hàng</a></li>
-          <li><a href="#" class="hover:underline">Giao hàng & đổi trả</a></li>
-          <li><a href="#" class="hover:underline">Liên hệ hỗ trợ</a></li>
+          <li><a href="#" class="hover:underline">Giao hàng &amp; Đổi trả</a></li>
+          <li><a href="mailto:huyy05@gmail.com?subject=Liên hệ hỗ trợ" class="hover:underline">Liên hệ hỗ trợ</a></li>
         </ul>
       </div>
       <div>
         <div class="font-semibold mb-2">Về chúng tôi</div>
         <ul class="space-y-1">
           <li><a href="#" class="hover:underline">Giới thiệu</a></li>
-          <li><a href="#" class="hover:underline">Tuyển dụng</a></li>
+          <li><a href="http://facebook.com/16yujiz/" target="_blank" class="hover:underline">Tuyển dụng</a></li>
         </ul>
       </div>
       <div>
         <div class="font-semibold mb-2">Danh mục</div>
         <ul class="space-y-1">
-          <li><a href="{{ route('products.index',['category'=>'men']) }}" class="hover:underline">Men</a></li>
-          <li><a href="{{ route('products.index',['category'=>'women']) }}" class="hover:underline">Women</a></li>
-          <li><a href="{{ route('products.index',['category'=>'kids']) }}" class="hover:underline">Kids</a></li>
+          <li><a href="{{ route('products.index',['gender'=>'men']) }}" class="hover:underline">Nam</a></li>
+          <li><a href="{{ route('products.index',['gender'=>'women']) }}" class="hover:underline">Nữ</a></li>
+          <li><a href="{{ route('products.index',['gender'=>'kids']) }}" class="hover:underline">Trẻ em</a></li>
         </ul>
       </div>
       <div class="text-zinc-500">
-        © {{ date('Y') }} Hyunshop
+        © {{ date('Y') }} Hyunshop. Tất cả các quyền được bảo lưu.
       </div>
     </div>
   </footer>

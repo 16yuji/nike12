@@ -13,10 +13,16 @@ class ProductController extends Controller
             ->with(['mainImage','brand','category'])
             ->where('is_active', true);
 
-        // Hỗ trợ cả ?category=... và alias ?gender=... từ navbar
-        $category = $r->get('category') ?? $r->get('gender');
-        if (!empty($category)) {
-            $q->whereHas('category', fn($c) => $c->where('slug', $category));
+        // Lọc theo type (nam/nữ/trẻ em)
+        if ($gender = $r->get('gender')) {
+            $q->where('type', $gender);
+        }
+        
+        // Lọc theo category - bỏ qua nếu là "new-featured"
+        if ($category = $r->get('category')) {
+            if ($category !== 'new-featured') {
+                $q->whereHas('category', fn($c) => $c->where('slug', $category));
+            }
         }
 
         if ($brand = $r->get('brand')) {

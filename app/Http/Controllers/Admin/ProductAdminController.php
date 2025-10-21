@@ -7,19 +7,24 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema; // để kiểm tra cột có trong DB không
 
 class ProductAdminController extends Controller
 {
     public function index(Request $request)
     {
         $q = $request->string('q')->toString();
-        $products = Product::when($q, fn($qr) => $qr->where('name', 'like', "%{$q}%"))
+
+        $products = Product::when($q, function ($qr) use ($q) {
+                $qr->where('name', 'like', "%{$q}%")
+                   ->orWhere('sku', 'like', "%{$q}%");
+            })
             ->latest('id')
             ->paginate(12)
             ->withQueryString();
 
-        // View giao diện admin
-        return view('admin.products.index', compact('products', 'q'));
+        return view('admin.products.index', compact('products','q'));
     }
 
     public function create()
@@ -27,57 +32,82 @@ class ProductAdminController extends Controller
         return view('admin.products.create');
     }
 
-    // app/Http/Controllers/Admin/ProductAdminController.php
+    public function store(Request $request)
+    {
+        // *** LƯU Ý: bỏ 'stock' khỏi validate vì DB không có cột 'stock'
+        $data = $request->validate([
+            'name'        => ['required','string','max:255'],
+            // sku trong migration đang NOT NULL + UNIQUE -> để required
+            'sku'         => ['required','string','max:100', Rule::unique('products','sku')],
+            'price'       => ['required','integer','min:0'],
+            'sale_price'  => ['nullable','integer','min:0','lte:price'],
+            'description' => ['nullable','string'],
+            'category_id' => ['nullable','integer','exists:categories,id'],
+            'brand_id'    => ['nullable','integer','exists:brands,id'],
+            'is_active'   => ['nullable','boolean'],
+            'image'       => ['nullable','image','mimes:jpg,jpeg,png,webp','max:4096'],
+        ]);
 
-public function store(Request $request)
-{
-    $data = $request->validate([
-        'name'        => ['required','string','max:255', Rule::unique('products','name')],
-        'sku'         => ['nullable','string','max:100', Rule::unique('products','sku')],
-        'price'       => ['required','numeric','min:0'],
-        'stock'       => ['required','integer','min:0'],
-        'description' => ['nullable','string'],
-        'image'       => ['nullable','image','max:2048'],
-        'category_id' => ['nullable','integer'],
-    ]);
+        // Tạo slug duy nhất từ name
+        $data['slug'] = $this->uniqueSlug($data['name']);
 
-    // 🔧 Chuẩn hoá: rỗng -> null
-    $data['category_id'] = filled($data['category_id'] ?? null) ? (int) $data['category_id'] : null;
-
-    if ($request->hasFile('image')) {
-        $data['image_path'] = $request->file('image')->store('products', 'public');
-    }
-
-    Product::create($data);
-    return redirect()->route('admin.products.index')->with('ok', 'Đã tạo sản phẩm.');
-}
-
-public function update(Request $request, Product $product)
-{
-    $data = $request->validate([
-        'name'        => ['required','string','max:255', Rule::unique('products','name')->ignore($product->id)],
-        'sku'         => ['nullable','string','max:100', Rule::unique('products','sku')->ignore($product->id)],
-        'price'       => ['required','numeric','min:0'],
-        'stock'       => ['required','integer','min:0'],
-        'description' => ['nullable','string'],
-        'image'       => ['nullable','image','max:2048'],
-        'category_id' => ['nullable','integer'],
-    ]);
-
-    // 🔧 Chuẩn hoá: rỗng -> null
-    $data['category_id'] = filled($data['category_id'] ?? null) ? (int) $data['category_id'] : null;
-
-    if ($request->hasFile('image')) {
-        if ($product->image_path && Storage::disk('public')->exists($product->image_path)) {
-            Storage::disk('public')->delete($product->image_path);
+        // Xử lý ảnh (nếu có)
+        if ($request->hasFile('image')) {
+            $data['image_path'] = $request->file('image')->store('products', 'public');
         }
-        $data['image_path'] = $request->file('image')->store('products', 'public');
+
+        // Chỉ giữ lại những cột đang tồn tại trong DB để tránh lỗi 1054
+        $data = $this->filterColumnsForProducts($data);
+
+        Product::create($data);
+
+        return redirect()->route('admin.products.index')->with('ok','Đã tạo sản phẩm.');
     }
 
-    $product->update($data);
-    return redirect()->route('admin.products.index')->with('ok', 'Đã cập nhật sản phẩm.');
-}
+    public function edit(Product $product)
+    {
+        return view('admin.products.edit', compact('product'));
+    }
 
+    public function update(Request $request, Product $product)
+    {
+        $data = $request->validate([
+            'name'        => ['required','string','max:255'],
+            'sku'         => ['required','string','max:100', Rule::unique('products','sku')->ignore($product->id)],
+            'price'       => ['required','integer','min:0'],
+            'sale_price'  => ['nullable','integer','min:0','lte:price'],
+            'description' => ['nullable','string'],
+            'category_id' => ['nullable','integer','exists:categories,id'],
+            'brand_id'    => ['nullable','integer','exists:brands,id'],
+            'is_active'   => ['nullable','boolean'],
+            'image'       => ['nullable','image','mimes:jpg,jpeg,png,webp','max:4096'],
+        ]);
+
+        // Nếu đổi tên, cập nhật slug (giữ slug cũ nếu tên không đổi)
+        if ($product->name !== $data['name']) {
+            $data['slug'] = $this->uniqueSlug($data['name'], $product->id);
+        }
+
+        if ($request->hasFile('image')) {
+            // Xoá ảnh cũ nếu có
+            if ($product->image_path && Storage::disk('public')->exists($product->image_path)) {
+                Storage::disk('public')->delete($product->image_path);
+            }
+            $data['image_path'] = $request->file('image')->store('products', 'public');
+        }
+
+        // Chỉ giữ các cột đang có trong DB
+        $data = $this->filterColumnsForProducts($data);
+
+        $product->update($data);
+
+        return redirect()->route('admin.products.index')->with('ok','Đã cập nhật sản phẩm.');
+    }
+
+    public function show(Product $product)
+    {
+        return view('admin.products.show', compact('product'));
+    }
 
     public function destroy(Product $product)
     {
@@ -86,12 +116,40 @@ public function update(Request $request, Product $product)
         }
         $product->delete();
 
-        return back()->with('ok', 'Đã xóa sản phẩm.');
+        return back()->with('ok','Đã xoá sản phẩm.');
     }
 
-    // (tuỳ chọn) show chi tiết trong khu vực admin
-    public function show(Product $product)
+    /**
+     * Tạo slug duy nhất (tự cộng hậu tố -2, -3 ... nếu trùng)
+     */
+    protected function uniqueSlug(string $name, ?int $ignoreId = null): string
     {
-        return view('admin.products.show', compact('product'));
+        $base = Str::slug($name);
+        $slug = $base;
+        $i = 2;
+
+        while (
+            Product::where('slug', $slug)
+                ->when($ignoreId, fn($q)=>$q->where('id','<>',$ignoreId))
+                ->exists()
+        ) {
+            $slug = "{$base}-{$i}";
+            $i++;
+        }
+
+        return $slug;
+    }
+
+    /**
+     * Chỉ giữ các key trùng cột thực sự tồn tại trong bảng 'products'
+     */
+    protected function filterColumnsForProducts(array $data): array
+    {
+        $columns = Schema::getColumnListing('products');
+        return array_filter(
+            $data,
+            fn($v, $k) => in_array($k, $columns, true),
+            ARRAY_FILTER_USE_BOTH
+        );
     }
 }

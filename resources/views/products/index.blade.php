@@ -1,22 +1,15 @@
 @extends('layouts.app')
 @section('content')
-<h1 class="text-2xl font-semibold mb-4">Sản phẩm</h1>
-<form method="GET" class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
-  <input class="border px-3 py-2" type="text" name="q" value="{{ request('q') }}" placeholder="Tìm kiếm...">
-  <input class="border px-3 py-2" type="number" name="min" value="{{ request('min') }}" placeholder="Giá từ">
-  <input class="border px-3 py-2" type="number" name="max" value="{{ request('max') }}" placeholder="Giá đến">
-  <select class="border px-3 py-2" name="color">
-    <option value="">Màu</option><option @selected(request('color')=='Black')>Black</option>
-  </select>
-  <select class="border px-3 py-2" name="size">
-    <option value="">Size</option><option @selected(request('size')=='42')>42</option>
-  </select>
-  <select class="border px-3 py-2" name="sort">
-    <option value="newest">Mới nhất</option>
-    <option value="price_asc" @selected(request('sort')=='price_asc')>Giá ↑</option>
-    <option value="price_desc" @selected(request('sort')=='price_desc')>Giá ↓</option>
-  </select>
-</form>
+@php
+    $title = match(request('gender')) {
+        'men' => 'Sản phẩm Nam',
+        'women' => 'Sản phẩm Nữ',
+        'kids' => 'Sản phẩm Trẻ em',
+        default => 'Tất cả sản phẩm'
+    };
+@endphp
+<h1 class="text-2xl font-semibold mb-4">{{ $title }}</h1>
+
 
 <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-6">
   @foreach($products as $p)

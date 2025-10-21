@@ -24,8 +24,24 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'role', // <- thêm vào để cho phép gán hàng loạt
+        'role',
     ];
+
+    /**
+     * Get the cart associated with the user.
+     */
+    public function cart()
+    {
+        return $this->hasOne(Cart::class)->latest();
+    }
+
+    /**
+     * Get the orders for the user.
+     */
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
 
     /**
      * The attributes that should be hidden for serialization.
