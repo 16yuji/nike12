@@ -1,4 +1,4 @@
-# :project website quản lý/ mua bán quần áo
+# :project website bán hàng
 
 ## : Thông Tin Sinh Viên
 
