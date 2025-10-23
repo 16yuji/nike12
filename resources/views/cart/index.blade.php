@@ -4,8 +4,8 @@
   <!-- Tab Navigation -->
   <div class="border-b mb-6">
     <div class="flex gap-8">
-      <a href="#cart" onclick="showTab('cart')" class="tab-button pb-4 px-2 font-medium text-lg border-b-2 border-black">Giỏ hàng</a>
-      <a href="#history" onclick="showTab('history')" class="tab-button pb-4 px-2 font-medium text-lg border-b-2 border-transparent text-gray-500 hover:text-black">Lịch sử đặt hàng</a>
+      <a href="#cart" onclick="showTab(event, 'cart')" class="tab-button pb-4 px-2 font-medium text-lg border-b-2 border-black">Giỏ hàng</a>
+      <a href="#history" onclick="showTab(event, 'history')" class="tab-button pb-4 px-2 font-medium text-lg border-b-2 border-transparent text-gray-500 hover:text-black">Lịch sử đặt hàng</a>
     </div>
   </div>
 
@@ -20,27 +20,40 @@
     @csrf
     @if(session('ok'))<div class="p-2 bg-green-100 border my-2">{{ session('ok') }}</div>@endif
     <table class="w-full text-sm">
-      <thead><tr class="border-b"><th class="text-left py-2">Sản phẩm</th><th>Đơn giá</th><th>Số lượng</th><th>Tạm tính</th><th></th></tr></thead>
+      <thead>
+        <tr class="border-b">
+          <th class="text-left py-2">Sản phẩm</th>
+          <th>Đơn giá</th>
+          <th>Số lượng</th>
+          <th>Tạm tính</th>
+          <th></th>
+        </tr>
+      </thead>
       <tbody>
         @foreach($cart->items as $i)
+          @php
+              // Ưu tiên cột products.image_path, sau đó đến mainImage->path
+              $coverPath = $i->product->image_path ?? optional($i->product->mainImage)->path;
+              $coverUrl  = $coverPath ? asset('storage/'.$coverPath) : 'https://placehold.co/100x100';
+          @endphp
           <tr class="border-b">
             <td class="py-2 flex items-center gap-3">
-              <img class="w-16 h-16 object-cover rounded" src="{{ $i->product->mainImage?->path ? asset('storage/'.$i->product->mainImage->path) : 'https://placehold.co/100x100' }}">
+              <img class="w-16 h-16 object-cover rounded" src="{{ $coverUrl }}" alt="{{ $i->product->name }}">
               <div>
                 <div class="font-medium">{{ $i->product->name }}</div>
                 <div class="text-zinc-500 text-xs">SKU: {{ $i->product->sku }}</div>
               </div>
             </td>
-            <td class="text-center">{{ number_format($i->unit_price) }}₫</td>
+            <td class="text-center">{{ number_format($i->unit_price, 0, ',', '.') }}₫</td>
             <td class="text-center">
               <input type="number" name="items[{{ $i->id }}]" class="border px-2 py-1 w-20 text-center" value="{{ $i->quantity }}" min="1">
             </td>
-            <td class="text-center">{{ number_format($i->unit_price * $i->quantity) }}₫</td>
+            <td class="text-center">{{ number_format($i->unit_price * $i->quantity, 0, ',', '.') }}₫</td>
             <td class="text-center">
               <form method="POST" action="{{ route('cart.remove', $i->id) }}" onsubmit="return confirm('Bạn có chắc muốn xóa sản phẩm này?')" class="inline">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="text-red-600 hover:text-red-800">
+                <button type="submit" class="text-red-600 hover:text-red-800" title="Xóa">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
@@ -62,7 +75,9 @@
       </div>
       <div class="text-right">
         <div class="text-lg font-semibold">Tổng cộng:</div>
-        <div class="text-2xl font-bold">{{ number_format($cart->items->sum(fn($i) => $i->unit_price * $i->quantity)) }}₫</div>
+        <div class="text-2xl font-bold">
+          {{ number_format($cart->items->sum(fn($i) => $i->unit_price * $i->quantity), 0, ',', '.') }}₫
+        </div>
       </div>
     </div>
   </form>
@@ -103,7 +118,7 @@
               </div>
               <div class="mt-2 flex justify-between items-end">
                 <div class="text-sm text-gray-600">{{ $order->items->count() }} sản phẩm</div>
-                <div class="font-medium">{{ number_format($order->total) }}₫</div>
+                <div class="font-medium">{{ number_format($order->total, 0, ',', '.') }}₫</div>
               </div>
             </div>
           </div>
@@ -130,7 +145,7 @@
 </div>
 
 <script>
-function showTab(tabName) {
+function showTab(event, tabName) {
     // Ẩn tất cả các tab
     document.getElementById('cart-tab').classList.add('hidden');
     document.getElementById('history-tab').classList.add('hidden');
@@ -149,17 +164,17 @@ function showTab(tabName) {
         }
     });
 
-    // Ngăn chặn hành vi mặc định của thẻ a
-    event.preventDefault();
+    // Ngăn hành vi mặc định của <a>
+    if (event) event.preventDefault();
 }
 
 // Kiểm tra hash URL khi tải trang
 window.onload = function() {
-    const hash = window.location.hash.substring(1); // Bỏ dấu # ở đầu
+    const hash = window.location.hash.substring(1);
     if (hash === 'history') {
-        showTab('history');
+        showTab(null, 'history');
     } else {
-        showTab('cart');
+        showTab(null, 'cart');
     }
 }
 </script>

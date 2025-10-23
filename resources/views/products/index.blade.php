@@ -1,4 +1,5 @@
 @extends('layouts.app')
+
 @section('content')
 @php
     $title = match(request('gender')) {
@@ -8,15 +9,19 @@
         default => 'Tất cả sản phẩm'
     };
 @endphp
-<h1 class="text-2xl font-semibold mb-4">{{ $title }}</h1>
 
+<h1 class="text-2xl font-semibold mb-4">{{ $title }}</h1>
 
 <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-6">
   @foreach($products as $p)
   <a href="{{ route('products.show',$p->slug) }}" class="group">
     <div class="aspect-square bg-gray-100 overflow-hidden">
-      <img class="w-full h-full object-cover group-hover:scale-105 transition"
-           src="{{ $p->mainImage?->path ? asset('storage/'.$p->mainImage->path) : 'https://placehold.co/600x600' }}">
+      <img
+        class="w-full h-full object-cover group-hover:scale-105 transition"
+        src="{{ $p->image_url }}"
+        alt="{{ $p->name }}"
+        loading="lazy"
+      >
     </div>
     <div class="mt-2">
       <div class="text-sm text-gray-600">{{ $p->brand?->name }}</div>

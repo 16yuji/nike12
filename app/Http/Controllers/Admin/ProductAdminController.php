@@ -32,36 +32,36 @@ class ProductAdminController extends Controller
         return view('admin.products.create');
     }
 
+    // === store() merged: validate + upload ảnh với Storage public/products ===
     public function store(Request $request)
     {
-        // *** LƯU Ý: bỏ 'stock' khỏi validate vì DB không có cột 'stock'
         $data = $request->validate([
-            'name'        => ['required','string','max:255'],
-            // sku trong migration đang NOT NULL + UNIQUE -> để required
-            'sku'         => ['required','string','max:100', Rule::unique('products','sku')],
-            'price'       => ['required','integer','min:0'],
-            'sale_price'  => ['nullable','integer','min:0','lte:price'],
+            'name'        => ['required','string','max:255', Rule::unique('products','name')],
+            'sku'         => ['nullable','string','max:100', Rule::unique('products','sku')],
+            'price'       => ['required','numeric','min:0'],
+            'stock'       => ['nullable','integer','min:0'],              // sẽ tự bỏ nếu DB không có
             'description' => ['nullable','string'],
             'category_id' => ['nullable','integer','exists:categories,id'],
             'brand_id'    => ['nullable','integer','exists:brands,id'],
+            'type'        => ['nullable','string'],
             'is_active'   => ['nullable','boolean'],
-            'image'       => ['nullable','image','mimes:jpg,jpeg,png,webp','max:4096'],
+            'image'       => ['nullable','image','mimes:jpg,jpeg,png,webp','max:4096'], // quan trọng
         ]);
 
         // Tạo slug duy nhất từ name
         $data['slug'] = $this->uniqueSlug($data['name']);
 
-        // Xử lý ảnh (nếu có)
+        // Lưu ảnh vào disk "public" => storage/app/public/products
         if ($request->hasFile('image')) {
             $data['image_path'] = $request->file('image')->store('products', 'public');
         }
 
-        // Chỉ giữ lại những cột đang tồn tại trong DB để tránh lỗi 1054
+        // Chỉ giữ lại các cột thực sự tồn tại để tránh lỗi 1054
         $data = $this->filterColumnsForProducts($data);
 
         Product::create($data);
 
-        return redirect()->route('admin.products.index')->with('ok','Đã tạo sản phẩm.');
+        return redirect()->route('admin.products.index')->with('ok','Đã thêm sản phẩm');
     }
 
     public function edit(Product $product)
@@ -69,29 +69,31 @@ class ProductAdminController extends Controller
         return view('admin.products.edit', compact('product'));
     }
 
+    // === update() merged: validate + xóa ảnh cũ (nếu có) + upload ảnh mới ===
     public function update(Request $request, Product $product)
     {
         $data = $request->validate([
-            'name'        => ['required','string','max:255'],
-            'sku'         => ['required','string','max:100', Rule::unique('products','sku')->ignore($product->id)],
-            'price'       => ['required','integer','min:0'],
-            'sale_price'  => ['nullable','integer','min:0','lte:price'],
+            'name'        => ['required','string','max:255', Rule::unique('products','name')->ignore($product->id)],
+            'sku'         => ['nullable','string','max:100', Rule::unique('products','sku')->ignore($product->id)],
+            'price'       => ['required','numeric','min:0'],
+            'stock'       => ['nullable','integer','min:0'],
             'description' => ['nullable','string'],
             'category_id' => ['nullable','integer','exists:categories,id'],
             'brand_id'    => ['nullable','integer','exists:brands,id'],
+            'type'        => ['nullable','string'],
             'is_active'   => ['nullable','boolean'],
             'image'       => ['nullable','image','mimes:jpg,jpeg,png,webp','max:4096'],
         ]);
 
-        // Nếu đổi tên, cập nhật slug (giữ slug cũ nếu tên không đổi)
+        // Cập nhật slug nếu đổi tên
         if ($product->name !== $data['name']) {
             $data['slug'] = $this->uniqueSlug($data['name'], $product->id);
         }
 
+        // Nếu có ảnh mới: xóa ảnh cũ (nếu tồn tại) rồi lưu ảnh mới
         if ($request->hasFile('image')) {
-            // Xoá ảnh cũ nếu có
             if ($product->image_path && Storage::disk('public')->exists($product->image_path)) {
-                Storage::disk('public')->delete($product->image_path);
+                Storage::disk('public')->delete($product->image_path); // <— đã sửa dấu nháy thừa
             }
             $data['image_path'] = $request->file('image')->store('products', 'public');
         }
@@ -101,7 +103,7 @@ class ProductAdminController extends Controller
 
         $product->update($data);
 
-        return redirect()->route('admin.products.index')->with('ok','Đã cập nhật sản phẩm.');
+        return back()->with('ok','Đã cập nhật');
     }
 
     public function show(Product $product)
@@ -119,9 +121,7 @@ class ProductAdminController extends Controller
         return back()->with('ok','Đã xoá sản phẩm.');
     }
 
-    /**
-     * Tạo slug duy nhất (tự cộng hậu tố -2, -3 ... nếu trùng)
-     */
+    /** Tạo slug duy nhất (tự cộng hậu tố -2, -3 ... nếu trùng) */
     protected function uniqueSlug(string $name, ?int $ignoreId = null): string
     {
         $base = Str::slug($name);
@@ -140,9 +140,7 @@ class ProductAdminController extends Controller
         return $slug;
     }
 
-    /**
-     * Chỉ giữ các key trùng cột thực sự tồn tại trong bảng 'products'
-     */
+    /** Chỉ giữ các key trùng cột thực sự tồn tại trong bảng 'products' */
     protected function filterColumnsForProducts(array $data): array
     {
         $columns = Schema::getColumnListing('products');
